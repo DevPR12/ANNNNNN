@@ -1,0 +1,133 @@
+import java.util.Scanner;
+import java.util.*;
+public class ass_6 {
+
+    // Function to find GCD
+    static long gcd(long a, long b) {
+        while (b != 0) {
+            long temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+
+    // Function to find modular inverse
+    static long modInverse(long e, long phi) {
+        for (long i = 1; i < phi; i++) {
+            if ((e * i) % phi == 1)
+                return i;
+        }
+        return 0;
+    }
+
+    // Function for modular exponentiation
+    static long modExp(long base, long exp, long mod) {
+        long result = 1;
+        base = base % mod;
+        while (exp > 0) {
+            if (exp % 2 == 1)
+                result = (result * base) % mod;
+            exp = exp / 2;
+            base = (base * base) % mod;
+        }
+        return result;
+    }
+
+    // Simple hash function
+    static long simpleHash(String msg) {
+        // long hash = 0;
+        // for (char c : msg.toCharArray()) {
+        //     hash = (hash + c) % 100; // simple hash
+        // }
+        // return hash;
+        return msg.length();
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        long p, q, n, phi, e, d;
+        String message;
+
+        System.out.println("===== RSA DIGITAL SIGNATURE DEMONSTRATION =====\n");
+
+        System.out.print("Enter two prime numbers p and q (>5): ");
+        p = sc.nextLong();
+        q = sc.nextLong();
+
+        n = p * q;
+        phi = (p - 1) * (q - 1);
+
+        System.out.println("\nStep 1: Key Generation");
+        System.out.println("-----------------------");
+        System.out.println("p = " + p + ", q = " + q);
+        System.out.println("n = p * q = " + n);
+        System.out.println("φ(n) = (p - 1) * (q - 1) = " + phi);
+
+        do {
+            System.out.print("\nEnter public exponent e (1 < e < φ and gcd(e, φ)=1): ");
+            e = sc.nextLong();
+            if (gcd(e, phi) != 1)
+                System.out.println("Invalid e! gcd(e, φ) ≠ 1. Try again.");
+        } while (gcd(e, phi) != 1);
+
+        d = modInverse(e, phi);
+        System.out.println("\nPublic Key (e, n) = (" + e + ", " + n + ")");
+        System.out.println("Private Key (d, n) = (" + d + ", " + n + ")");
+        System.out.println("Verified: (e × d) mod φ = (" + e + " × " + d + ") mod " + phi + " = " + ((e * d) % phi));
+
+        sc.nextLine(); // clear input buffer
+        System.out.print("\nEnter message to send securely: ");
+        message = sc.nextLine();
+
+        System.out.println("\nStep 2: Hashing the Message (Integrity Check)");
+        System.out.println("---------------------------------------------");
+        long hashValue = simpleHash(message);
+        System.out.println("Original Message: \"" + message + "\"");
+        System.out.println("Computed Hash Value (mod 100): " + hashValue);
+
+        System.out.println("\nStep 3: Digital Signature Creation (Non-Repudiation)");
+        System.out.println("---------------------------------------------------");
+        long signature = modExp(hashValue, d, n);
+        System.out.println("Signature = (hashValue ^ d) mod n = (" + hashValue + "^" + d + ") mod " + n + " = " + signature);
+        System.out.println("This signature is sent along with the message.");
+
+
+        System.out.println("\nStep 4: Message Encryption (Confidentiality)");
+        System.out.println("---------------------------------------------");
+        long[] cipher = new long[message.length()];
+        System.out.print("Ciphertext: ");
+        for (int i = 0; i < message.length(); i++) {
+            cipher[i] = modExp((int) message.charAt(i), e, n);
+            System.out.print(cipher[i] + " ");
+        }
+        System.out.println("\nMessage encrypted successfully using receiver's public key.");
+
+        System.out.println("\nStep 5: Message Decryption (Receiver Side)");
+        System.out.println("-------------------------------------------");
+        StringBuilder decrypted = new StringBuilder();
+        for (int i = 0; i < message.length(); i++) {
+            char ch = (char) modExp(cipher[i], d, n);
+            decrypted.append(ch);
+        }
+        System.out.println("Decrypted Message: " + decrypted);
+
+        System.out.println("\nStep 6: Signature Verification");
+        System.out.println("-------------------------------");
+        long verifyHash = modExp(signature, e, n);
+        long receiverHash = simpleHash(decrypted.toString());
+
+        System.out.println("Decrypted Signature Value (Sender's Hash): " + verifyHash);
+        System.out.println("Receiver's Own Computed Hash: " + receiverHash);
+
+        if (verifyHash == receiverHash) {
+            System.out.println("\n Signature Verified Successfully!");
+        } else {
+            System.out.println("\n Verification Failed!");
+            System.out.println("Message may be altered or not from the authentic sender.");
+        }
+
+        sc.close();
+    }
+}
